@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { ref, get, set } from "firebase/database";
+import { ref, get, set, onValue } from "firebase/database"; // onValue 추가
 import { db } from "../firebase";
 import { QRCodeCanvas } from 'qrcode.react';
-import '../App.css'; // CSS 파일 임포트
+import '../App.css'; 
 
 function Registration() {
   const [nickname, setNickname] = useState('');
   const [step, setStep] = useState('input'); 
   const [finalName, setFinalName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [points, setPoints] = useState(0); // 점수 상태 추가
+
+  // 실시간 점수 리스너 설정
+  useEffect(() => {
+    if (finalName && step === 'confirmed') {
+      // participants/{이름}/points 경로를 실시간으로 감시합니다.
+      const pointsRef = ref(db, `participants/${finalName}/points`);
+      
+      const unsubscribe = onValue(pointsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setPoints(snapshot.val());
+        } else {
+          setPoints(0);
+        }
+      });
+
+      // 컴포넌트 언마운트 시 리스너 해제
+      return () => unsubscribe();
+    }
+  }, [finalName, step]);
 
   useEffect(() => {
     const savedName = localStorage.getItem('myEventId');
@@ -101,6 +121,21 @@ function Registration() {
               <QRCodeCanvas value={finalName} size={220} level="H" includeMargin={true} />
             </div>
             <h2>{finalName}</h2>
+            
+            {/* 점수 표시 섹션 추가 */}
+            <div style={{
+              margin: '20px 0',
+              padding: '15px',
+              backgroundColor: 'rgba(var(--success-rgb), 0.1)',
+              borderRadius: '12px',
+              border: '2px solid var(--success)'
+            }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>Current Points</p>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--success)' }}>
+                {points}
+              </div>
+            </div>
+
             <p>Show this QR code at any booth.</p>
           </>
         )}
