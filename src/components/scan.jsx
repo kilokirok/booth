@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { ref, runTransaction } from "firebase/database";
-import { db } from "../../firebase";
+import { db } from "../firebase";
 import '../App.css'; // 공통 스타일 적용
 
 function Scanner() {

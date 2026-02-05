@@ -1,9 +1,9 @@
 // src/App.jsx
 import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import Registration from './components/Registration';
-import Scanner from './components/Scanner';
-import Admin from './components/Admin';
+import Registration from './components/registration.jsx';
+import Scanner from './components/scan.jsx';
+import Admin from './components/admin.jsx';
 
 function App() {
   return (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ref, get, set } from "firebase/database";
-import { db } from "../../firebase";
+import { db } from "../firebase";
 import { QRCodeCanvas } from 'qrcode.react';
 import '../App.css'; // CSS 파일 임포트
 
