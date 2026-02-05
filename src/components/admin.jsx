@@ -30,7 +30,7 @@ function Admin() {
       return;
     }
     // 요청하신 형식: Nickname * Points, Nickname * Points
-    const text = list.map(p => `${p.nickname} * ${p.points}`).join(', ');
+    const text = list.map(p => `${p.nickname}*${p.points}`).join(', ');
     
     navigator.clipboard.writeText(text);
     alert("Copied to clipboard!");
