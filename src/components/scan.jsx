@@ -62,7 +62,7 @@ function Scanner() {
 
       setTimeout(() => {
         setCooldown(false);
-      }, 2500); // 7000ms = 7초
+      }, 1500); // 7000ms = 7초
     }
 
     function onScanError(err) {
@@ -96,7 +96,7 @@ function Scanner() {
         
         <div style={{ marginTop: '20px' }}>
             <p style={{ fontSize: '0.8rem', color: '#666' }}>
-                Next scan will be available automatically after 7 seconds.
+                Next scan will be available automatically after a second.
             </p>
         </div>
       </div>
