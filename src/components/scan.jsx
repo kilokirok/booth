@@ -1,90 +1,97 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { ref, runTransaction } from "firebase/database";
+import { ref, get, update } from "firebase/database";
 import { db } from "../firebase";
-import '../App.css'; // 공통 스타일 적용
+import '../App.css';
 
 function Scanner() {
-  const [lastScanned, setLastScanned] = useState('');
+  const [scanResult, setScanResult] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    // 스캐너 설정: fps는 초당 프레임, qrbox는 스캔 영역 크기
-    const scanner = new Html5QrcodeScanner("reader", { 
-      fps: 10, 
-      qrbox: { width: 250, height: 250 } 
+    const scanner = new Html5QrcodeScanner('reader', {
+      qrbox: {
+        width: 250,
+        height: 250,
+      },
+      fps: 10,
     });
 
-    scanner.render(onScanSuccess, onScanFailure);
+    scanner.render(onScanSuccess, onScanError);
 
-    function onScanSuccess(decodedText) {
-      if (isProcessing) return; // 이미 처리 중이면 중복 실행 방지
+    async function onScanSuccess(result) {
+      // 이미 처리 중이면 중복 실행 방지
+      if (isProcessing) return;
       
-      handleAddPoint(decodedText);
-    }
+      setIsProcessing(true);
+      setScanResult(result);
 
-    function onScanFailure(error) {
-      // 스캔 실패(QR이 카메라에 안 보일 때)는 조용히 무시
-    }
+      // 1. 점수 입력받기 (기본값 10점)
+      const pointToAdd = window.prompt(`[${result}]님에게 부여할 점수를 입력하세요`, "10");
 
-    return () => scanner.clear(); // 컴포넌트 언마운트 시 스캐너 종료
-  }, [isProcessing]);
+      if (pointToAdd !== null) {
+        const scoreNum = parseInt(pointToAdd);
+        
+        if (isNaN(scoreNum)) {
+          alert("숫자만 입력 가능합니다. 다시 시도해주세요.");
+        } else {
+          try {
+            const userRef = ref(db, `participants/${result}`);
+            const snapshot = await get(userRef);
 
-  const handleAddPoint = async (nickname) => {
-    setIsProcessing(true);
-    const userRef = ref(db, `participants/${nickname}`);
+            if (snapshot.exists()) {
+              const currentPoints = snapshot.val().points || 0;
+              
+              // 2. Firebase 점수 업데이트 (기존 점수 + 새 점수)
+              await update(userRef, {
+                points: currentPoints + scoreNum
+              });
 
-    try {
-      await runTransaction(userRef, (user) => {
-        if (user) {
-          user.points = (user.points || 0) + 1;
+              alert(`✅ 업데이트 완료!\n대상: ${result}\n추가 점수: ${scoreNum}\n현재 총점: ${currentPoints + scoreNum}`);
+            } else {
+              alert("❌ 등록되지 않은 사용자입니다.");
+            }
+          } catch (error) {
+            console.error(error);
+            alert("데이터베이스 업데이트 중 오류가 발생했습니다.");
+          }
         }
-        return user;
-      });
+      }
 
-      // 성공 피드백
-      setLastScanned(nickname);
-      if (navigator.vibrate) navigator.vibrate(100); // 폰 진동 (지원되는 기기만)
-      
-    } catch (error) {
-      console.error("Transaction failed: ", error);
-      alert("Error: Participant not found or connection issue.");
-    } finally {
-      // 2초 후 다음 스캔이 가능하도록 딜레이 (연속 중복 스캔 방지)
-      setTimeout(() => setIsProcessing(false), 2000);
+      // 3. 잠시 후 다음 스캔 가능하도록 초기화
+      setTimeout(() => {
+        setIsProcessing(false);
+        setScanResult(null);
+      }, 2000); 
     }
-  };
+
+    function onScanError(err) {
+      // 스캔 에러는 로그에 찍지 않고 조용히 넘깁니다 (너무 자주 발생함)
+    }
+
+    return () => {
+      scanner.clear().catch(error => console.error("Scanner cleanup failed", error));
+    };
+  }, [isProcessing]);
 
   return (
     <div className="container">
       <div className="card">
         <h1>Booth Scanner</h1>
-        <p>Scan participant's QR code</p>
+        <p>Scan participant's QR code to give points.</p>
         
-        {/* 스캐너가 렌더링될 영역 */}
-        <div id="reader" style={{ width: '100%', marginTop: '1.5rem' }}></div>
+        <div id="reader" style={{ width: '100%' }}></div>
 
-        {lastScanned && (
-          <div style={{ 
-            marginTop: '1.5rem', 
-            padding: '1rem', 
-            background: '#dcfce7', 
-            color: '#166534', 
-            borderRadius: '0.75rem',
-            fontWeight: 'bold' 
-          }}>
-            ✅ Successfully added point to: {lastScanned}
+        {scanResult && (
+          <div style={{ marginTop: '20px', color: 'var(--success)', fontWeight: 'bold' }}>
+            Last Scanned: {scanResult}
           </div>
         )}
-
-        {isProcessing && <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Processing...</p>}
         
-        <div style={{ marginTop: '2rem', textAlign: 'left', fontSize: '0.9rem', color: '#64748b' }}>
-          <strong>Tips:</strong>
-          <ul style={{ paddingLeft: '1.2rem' }}>
-            <li>Make sure the user's screen is bright.</li>
-            <li>Hold the phone steady for 1-2 seconds.</li>
-          </ul>
+        <div style={{ marginTop: '20px' }}>
+            <button onClick={() => window.location.reload()} className="btn-secondary">
+                Reset Scanner
+            </button>
         </div>
       </div>
     </div>
