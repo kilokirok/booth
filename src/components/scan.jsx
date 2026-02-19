@@ -27,7 +27,7 @@ function Scanner() {
       setIsProcessing(true);
       setScanResult(result);
 
-      const pointToAdd = window.prompt(`How many points for [${result}]?`, "10");
+      const pointToAdd = window.prompt(`How many points for [${result}]?`, "1");
 
       if (pointToAdd !== null) {
         const scoreNum = parseInt(pointToAdd);
