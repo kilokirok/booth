@@ -62,7 +62,7 @@ function Scanner() {
 
       setTimeout(() => {
         setCooldown(false);
-      }, 7000); // 7000ms = 7초
+      }, 2500); // 7000ms = 7초
     }
 
     function onScanError(err) {
@@ -84,7 +84,7 @@ function Scanner() {
 
         {cooldown && (
           <div style={{ marginTop: '20px', color: 'var(--danger)', fontWeight: 'bold' }}>
-            Wait for 7 seconds for next scan...
+            Wait for a second for next scan...
           </div>
         )}
 
