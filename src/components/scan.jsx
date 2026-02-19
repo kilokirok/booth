@@ -7,6 +7,7 @@ import '../App.css';
 function Scanner() {
   const [scanResult, setScanResult] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cooldown, setCooldown] = useState(false); // 7초 대기 상태 추가
 
   useEffect(() => {
     const scanner = new Html5QrcodeScanner('reader', {
@@ -20,20 +21,19 @@ function Scanner() {
     scanner.render(onScanSuccess, onScanError);
 
     async function onScanSuccess(result) {
-      // 이미 처리 중이면 중복 실행 방지
-      if (isProcessing) return;
+      // 처리 중이거나 7초 쿨타임 중이면 스캔 무시
+      if (isProcessing || cooldown) return;
       
       setIsProcessing(true);
       setScanResult(result);
 
-      // 1. 점수 입력받기 (기본값 10점)
-      const pointToAdd = window.prompt(`[${result}]님에게 부여할 점수를 입력하세요`, "10");
+      const pointToAdd = window.prompt(`How many points for [${result}]?`, "10");
 
       if (pointToAdd !== null) {
         const scoreNum = parseInt(pointToAdd);
         
         if (isNaN(scoreNum)) {
-          alert("숫자만 입력 가능합니다. 다시 시도해주세요.");
+          alert("Please enter numbers only.");
         } else {
           try {
             const userRef = ref(db, `participants/${result}`);
@@ -41,57 +41,63 @@ function Scanner() {
 
             if (snapshot.exists()) {
               const currentPoints = snapshot.val().points || 0;
-              
-              // 2. Firebase 점수 업데이트 (기존 점수 + 새 점수)
               await update(userRef, {
                 points: currentPoints + scoreNum
               });
-
-              alert(`✅ 업데이트 완료!\n대상: ${result}\n추가 점수: ${scoreNum}\n현재 총점: ${currentPoints + scoreNum}`);
+              alert(`Success!\nUser: ${result}\nAdded: ${scoreNum}\nTotal: ${currentPoints + scoreNum}`);
             } else {
-              alert("❌ 등록되지 않은 사용자입니다.");
+              alert("User not found.");
             }
           } catch (error) {
             console.error(error);
-            alert("데이터베이스 업데이트 중 오류가 발생했습니다.");
+            alert("Database error occurred.");
           }
         }
       }
 
-      // 3. 잠시 후 다음 스캔 가능하도록 초기화
+      // 점수 처리가 끝나면 7초 동안 쿨타임 적용
+      setScanResult(null);
+      setIsProcessing(false);
+      setCooldown(true);
+
       setTimeout(() => {
-        setIsProcessing(false);
-        setScanResult(null);
-      }, 2000); 
+        setCooldown(false);
+      }, 7000); // 7000ms = 7초
     }
 
     function onScanError(err) {
-      // 스캔 에러는 로그에 찍지 않고 조용히 넘깁니다 (너무 자주 발생함)
+      // 스캔 에러 무시
     }
 
     return () => {
       scanner.clear().catch(error => console.error("Scanner cleanup failed", error));
     };
-  }, [isProcessing]);
+  }, [isProcessing, cooldown]);
 
   return (
     <div className="container">
       <div className="card">
         <h1>Booth Scanner</h1>
-        <p>Scan participant's QR code to give points.</p>
+        <p>Scan QR code to give points.</p>
         
         <div id="reader" style={{ width: '100%' }}></div>
 
-        {scanResult && (
+        {cooldown && (
+          <div style={{ marginTop: '20px', color: 'var(--danger)', fontWeight: 'bold' }}>
+            Wait for 7 seconds for next scan...
+          </div>
+        )}
+
+        {scanResult && !cooldown && (
           <div style={{ marginTop: '20px', color: 'var(--success)', fontWeight: 'bold' }}>
-            Last Scanned: {scanResult}
+            Processing: {scanResult}
           </div>
         )}
         
         <div style={{ marginTop: '20px' }}>
-            <button onClick={() => window.location.reload()} className="btn-secondary">
-                Reset Scanner
-            </button>
+            <p style={{ fontSize: '0.8rem', color: '#666' }}>
+                Next scan will be available automatically after 7 seconds.
+            </p>
         </div>
       </div>
     </div>
